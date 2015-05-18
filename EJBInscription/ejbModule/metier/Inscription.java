@@ -1,139 +1,173 @@
 package metier;
-package ejb;
 
-import javax.annotation.Resource;
-import javax.ejb.ActivationConfigProperty;
-import javax.ejb.MessageDriven;
-import javax.jms.Message;
-import javax.jms.MessageListener;
-import javax.jms.ObjectMessage;
-
-
+import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-
-
-import javax.ejb.MessageDrivenContext;
-import javax.jms.JMSException;
-
-import meserreurs.MonException;
-import metier.Inscription;
-
-import java.io.*;
-
-import persistance.*;
-
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.io.Serializable;
 
-/**
- * Message-Driven Bean implementation class for: DemandeInscriptionTopic
- */
-@MessageDriven(activationConfig = {
-		@ActivationConfigProperty(propertyName = "destination", propertyValue = "java:jboss/exported/topic/DemandeInscriptionJmsTopic"),
-		@ActivationConfigProperty(propertyName = "destinationType", propertyValue = "javax.jms.Topic") }, mappedName = "DemandeInscriptionJmsTopic")
-public class DemandeInscriptionTopic implements MessageListener {
+import meserreurs.MonException;
+import persistance.DialogueBd;
 
-	@Resource
-	private MessageDrivenContext context;
+/**
+ * Classe permettant de gérer des demandes d'inscriptions
+ * @author Franck
+ *
+ */
+public class Inscription  implements  Serializable  
+{
+	private static final long serialVersionUID = 1L;
+	private String nomcandidat;
+	private String prenomcandidat;
+	private Date datenaissance;
+	private String adresse;
+	private String cpostal;
+	private String ville;
 
 	/**
-	 * Default constructor.
+	 * Permet de récupérer l'adresse du candidat
+	 * @return L'adresse du candidat
 	 */
-	public DemandeInscriptionTopic() {
-		// TODO Auto-generated constructor stub
+	public String getAdresse() 
+	{return adresse;}
+
+	/**
+	 * Permet de spécifier la nouvelle valeur de l'adresse du candidat
+	 * @param adresse La nouvelle valeur de l'adresse du candidat
+	 */
+	public void setAdresse(String adresse) 
+	{this.adresse = adresse;}
+
+	/**
+	 * Permet de récupérer le code postal du candidat
+	 * @return Le code postal du candidat
+	 */
+	public String getCpostal() 
+	{return cpostal;}
+
+	/**
+	 * Permet de spécifier la nouvelle valeur du code postal du candidat
+	 * @param cpostal La nouvelle valeur du code postal du candidat
+	 */
+	public void setCpostal(String cpostal) 
+	{this.cpostal = cpostal;}
+
+	/**
+	 * Permet de récupérer la date de naissance du candidat
+	 * @return La date de naissance du candidat
+	 */
+	public Date getDatenaissance() 
+	{return datenaissance;}
+
+	/**
+	 * Permet de spécifier la nouvelle valeur de la date de naissance du candidat
+	 * @param datenaissance La nouvelle valeur de la date de naissance du candidat
+	 */
+	public void setDatenaissance(Date datenaissance) 
+	{this.datenaissance = datenaissance;}
+
+	/**
+	 * Permet de récupérer le nom du candidat
+	 * @return Le nom du candidat
+	 */
+	public String getNomcandidat() 
+	{return nomcandidat;}
+
+	/**
+	 * Permet de spécifier la nouvelle valeur du nom du candidat
+	 * @param nomcandidat La nouvelle valeur du nom du candidat
+	 */
+	public void setNomcandidat(String nomcandidat) 
+	{this.nomcandidat = nomcandidat;}
+
+	/**
+	 * Permet de récupérer le prénom du candidat
+	 * @return Le prénom du candidat
+	 */
+	public String getPrenoncandidat() 
+	{return prenomcandidat;}
+
+	/**
+	 * Permet de spécifier la nouvelle valeur du prénom du candidat
+	 * @param prenoncandidat La nouvelle valeur du prénom du candidat
+	 */
+	public void setPrenoncandidat(String prenoncandidat) 
+	{this.prenomcandidat = prenoncandidat;}
+
+	/**
+	 * Permet de récupérer la ville du candidat
+	 * @return La ville du candidat
+	 */
+	public String getVille() 
+	{return ville;}
+
+	/**
+	 * Permet de spécifier la nouvelle valeur de la ville du candidat
+	 * @param ville La nouvelle valeur de la ville du candidat
+	 */
+	public void setVille(String ville) 
+	{this.ville = ville;}
+	
+	public String toString()
+	{
+		return "Demande d'inscription: \t" +
+			   "- Nom = " + nomcandidat + "\t" + 
+			   "- Prénom = " + prenomcandidat + "\t" + 
+			   "- Date de naissance = " + datenaissance + "\t" + 
+			   "- Adresse = " + adresse + "\t" + 
+			   "- Code postal = " + cpostal + "\t" + 
+			   "- Ville = " + ville;
 	}
 	
 	/**
-	 * @see MessageListener#onMessage(Message)
-	 */
-	public void onMessage(Message message) {
-		// TODO Auto-generated method stub
-		boolean ok = false;
-
-		// On gère le message récupéré dans le topic
-		try {
-			// On transforme le message en demande d'inscription
-			if (message != null)
-			{
-			ObjectMessage objectMessage = (ObjectMessage) message;
-			Inscription uneInscription = (Inscription) objectMessage
-					.getObject();
-			// On insère cette demande d'inscription dans la base de données
-			try {
-				ok = InsertionDemandeInscription(uneInscription);
-			} catch (MonException e) {
-				EcritureErreur(e.getMessage());
-			}
-			}
-		} catch (JMSException jmse) {
-			
-			EcritureErreur(jmse.getMessage());
-			context.setRollbackOnly();
-		}
-		
-
-	}
-
-	/**
-	 * Permet d'enregistrer une erreur dans un fichier log
+	 * Permet de récupérer la liste des demandes d'inscription
 	 * 
-	 * @param message
-	 *            Le message d'erreur
-	 */
-	public void EcritureErreur(String message) {
-		BufferedWriter wr;
-		String nomf = "erreurs.log";
-		java.util.Date madate = new java.util.Date();
-		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yy hh:mm");
-
-		try {
-			// On écrit à la fin du fichier
-			wr = new BufferedWriter(new FileWriter(nomf, true));
-			wr.newLine();
-			wr.write(sdf.format(madate));
-			wr.newLine();
-			wr.write(message);
-			wr.close();
-		} catch (FileNotFoundException ef) {
-			;
-		} catch (IOException eio) {
-			;
-		}
-	}
-
-	/**
-	 * Permet d'insérer une demande d'inscription La table est auto incrémentée
-	 * 
-	 * @param d
-	 *            La demande d'inscription à insérer
-	 * @return Vrai si l'insertion s'est bien passée, Faux sinon
+	 * @return La liste des demandes d'inscription
 	 * @throws MonException
 	 */
-	public boolean InsertionDemandeInscription(Inscription d)
-			throws MonException {
+	public ArrayList<Inscription> recupererDmdInscription() throws MonException {
+		ArrayList<Inscription> listeDmdInscription = new ArrayList<Inscription>();
+		int index = 0;
 		String mysql = "";
-		boolean ok = true;
-
+		List<Object> rs;
 		try {
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-			String myDate = sdf.format(d.getDatenaissance()).toString();
 
-			// On crée la requête d'insertion
-			mysql = "INSERT INTO INSCRIPTION (NOMCANDIDAT , PRENOMCANDIDAT, DATENAISSANCE, ADRESSE, CPOSTAL,VILLE ) ";
-			mysql = mysql + " VALUES (  \'" + d.getNomcandidat() + "\', ";
-			mysql = mysql + "\' " + d.getPrenoncandidat() + "\', " + "\' "
-					+ myDate + "\', ";
-			mysql = mysql + "\' " + d.getAdresse() + "\', " + "\' "
-					+ d.getCpostal() + "\',\' " + d.getVille() + "\' )";
+			// On crée la requête de sélection
+			mysql = "SELECT * " + "FROM inscription";
 
-			// On exécute la requête d'insertion et on ferme la connexion
-			DialogueBd.insertionBD(mysql);
-		} catch (MonException e) {
-			ok = false;
+			// On exécute la requête
+			rs = DialogueBd.lecture(mysql);
+
+			// On insère toutes les demandes d'inscription (tous les candidats)
+			// dans l'ArrayList
+
+			while (index < rs.size()) {
+				Inscription dmdInsc = new Inscription();
+
+				dmdInsc.setNomcandidat(rs.get(index + 0).toString());
+				dmdInsc.setPrenoncandidat(rs.get(index + 1).toString());
+				DateFormat dateFormatpers = new SimpleDateFormat("yyyy-MM-dd");
+
+				dmdInsc.setDatenaissance(dateFormatpers.parse(rs.get(index + 2)
+						.toString()));
+				dmdInsc.setAdresse(rs.get(index + 3).toString());
+				dmdInsc.setCpostal(rs.get(index + 4).toString());
+				dmdInsc.setVille(rs.get(index + 5).toString());
+				index = index + 6;
+				listeDmdInscription.add(dmdInsc);
+			}
+
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			throw new MonException(e.getMessage());
+		}
+
+		catch (MonException e) {
 			throw e;
 		}
-		return ok;
+		return listeDmdInscription;
 	}
-
-	
-
 }
+
